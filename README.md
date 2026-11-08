@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  A small request bin for debugging webhooks.<br>
+  A request bin for debugging webhooks.<br>
 </p>
 
 <p align="center">
