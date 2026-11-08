@@ -1,14 +1,24 @@
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL_POOLED!);
+
 export async function handle(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const body = await request.text();
+  const query = new URL(request.url).search;
 
-  console.log('bin:', id);
-  console.log('method:', request.method);
-  console.log('headers:', Object.fromEntries(request.headers));
-  console.log('body:', request.body);
+  await sql`
+  INSERT INTO requests (bin_id, method, headers, query, body)
+  VALUES (
+    ${id},
+    ${request.method},
+    ${JSON.stringify(Object.fromEntries(request.headers))}::jsonb,
+    ${query},
+    ${body}
+  )`;
 
   return new Response('ok');
 }
