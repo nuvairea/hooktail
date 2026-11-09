@@ -1,8 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL_POOLED!);
-
-export async function handle(
+async function handle(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
