@@ -12,5 +12,5 @@
 body {
   background: var(--color-bg);
   color: var(--color-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-jetbrains-mono), monospace;
 }
