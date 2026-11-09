@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -9,8 +9,12 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'hooktail',
-  description: 'Lightweight request bin for debugging webhooks.',
+  description: 'A request bin for debugging webhooks.',
 };
+
+export const viewport: Viewport = {
+  themeColor: '#0a0a0a'
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
