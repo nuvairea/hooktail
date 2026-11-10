@@ -11,7 +11,7 @@ export default function NotFound() {
       <div className='my-auto'>
         <h1 className='text-3xl text-white'>bin not found</h1>
         <p className='mt-3 text-xs'>
-          this bin expired or never existed. bins are deleted after 24 hours.
+          this bin expired or never existed. expired bins are deleted when a new bin is created.
         </p>
       </div>
 
