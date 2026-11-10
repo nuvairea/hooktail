@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { neon } from '@neondatabase/serverless';
 import CopyButton from './copy-button';
-import { type Row, timeAgo, size, formatBody } from './format';
+import { type Row, timeAgo, timeUntil, size, formatBody } from './format';
 import { Json, MethodPill, KeyValueList } from './parts';
 import { notFound } from 'next/navigation';
+import Refresher from './refresher';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +16,11 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
   const sql = neon(process.env.DATABASE_URL_POOLED!);
 
   const bin = await sql`
-    SELECT 1 FROM bins
-    WHERE id = ${id} AND created_at > now() - interval '24 hours'
+    SELECT expires_at FROM bins
+    WHERE id = ${id} AND expires_at > now()
   `;
   if (bin.length === 0) notFound();
+  const expiresAt = bin[0].expires_at;
 
   const rows = (await sql`
     SELECT id, method, path, headers, query, body, created_at
@@ -62,12 +64,13 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
 
   return (
     <div className='min-h-screen md:grid md:grid-cols-[360px_1fr]'>
+      <Refresher />
       {/* left pane: bin info + request list */}
       <aside className={`border-line p-5 md:block md:border-r ${mobileDetail ? 'hidden' : ''}`}>
         <p className='text-white'>
           <span className='mr-2 text-accent'>●</span>hooktail
         </p>
-        <p className='mt-1 text-xs'>{rows.length === 0 ? 'waiting' : `${rows.length} requests`} · expires in 24h</p>
+        <p className='mt-1 text-xs'>{rows.length === 0 ? 'waiting' : `${rows.length} requests`} · expires in {timeUntil(expiresAt)}</p>
 
         <div className='mt-5 rounded-lg border border-line bg-panel p-4'>
           <p className='text-[11px]'>send requests to</p>
@@ -101,7 +104,7 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
           <div className='mt-5 flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-line px-6 text-center md:hidden'>
             <span className='mb-4 text-2xl text-accent'>●</span>
             <p className='text-white'>waiting for requests</p>
-            <p className='mt-2 text-xs'>send any http request to your url, then refresh. it shows up here.</p>
+            <p className='mt-2 text-xs'>send any http request to your url. it shows up here.</p>
           </div>
         )}
       </aside>
@@ -112,7 +115,7 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
           <div className='flex min-h-80 flex-col items-center justify-center rounded-lg border border-dashed border-line text-center'>
             <span className='mb-4 text-2xl text-accent'>●</span>
             <p className='text-white'>waiting for requests</p>
-            <p className='mt-2 max-w-xs text-xs'>send any http request to your url, then refresh. it shows up here.</p>
+            <p className='mt-2 max-w-xs text-xs'>send any http request to your url. it shows up here.</p>
           </div>
         )}
 
@@ -155,7 +158,6 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
           </>
         )}
       </section>
-
     </div>
   );
 }
