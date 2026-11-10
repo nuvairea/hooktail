@@ -21,7 +21,7 @@ async function handle(
     ${body}::text
   WHERE EXISTS (
     SELECT 1 FROM bins
-    WHERE id = ${id} AND created_at > now() - interval '24 hours'
+    WHERE id = ${id} AND expires_at > now()
   )
   RETURNING id
 `;
