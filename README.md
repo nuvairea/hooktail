@@ -28,7 +28,7 @@
 Open the site and you get a bin with its own URL. Send anything to it:
 
 ```bash
-curl -X POST https://hooktail.vercel.app/h/<your-id> -d 'hello'
+curl -X POST https://hooktail.vercel.app/b/<your-id> -d 'hello'
 ```
 
 ## How it works
