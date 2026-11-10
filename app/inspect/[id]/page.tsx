@@ -6,6 +6,18 @@ import { type Row, timeAgo, timeUntil, size, formatBody } from './format';
 import { Json, MethodPill, KeyValueList } from './parts';
 import { notFound } from 'next/navigation';
 import Refresher from './refresher';
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+}
 
 export const dynamic = 'force-dynamic';
 
