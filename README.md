@@ -35,12 +35,12 @@ curl -X POST https://hooktail.vercel.app/b/<your-id> -d 'hello'
 
 Each visit creates a bin with a random id and an expiry time. Every bin has two URLs:
 
-| URL | Purpose |
-| --- | --- |
-| `/inspect/<id>` | the page you look at |
-| `/b/<id>` | where you send requests |
+| URL             | Purpose                 |
+| --------------- | ----------------------- |
+| `/inspect/<id>` | the page you look at    |
+| `/b/<id>`       | where you send requests |
 
-They are separate because a browser opening the page and curl sending a GET look the same to the server. Refresh the page to see new requests. Expired bins are deleted whenever a new bin is created.
+They are separate because a browser opening the page and curl sending a GET look the same to the server. The page auto refresh to show new requests. Expired bins are deleted whenever a new bin is created.
 
 ## Stack
 
