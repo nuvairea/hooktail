@@ -37,10 +37,10 @@ Each visit creates a bin with a random id and an expiry time. Every bin has two 
 
 | URL | Purpose |
 | --- | --- |
-| `/b/<id>` | the page you look at |
-| `/h/<id>` | where you send requests |
+| `/inspect/<id>` | the page you look at |
+| `/b/<id>` | where you send requests |
 
-They are separate because a browser opening the page and curl sending a GET look the same to the server. The page polls for new requests, and a scheduled job deletes expired bins.
+They are separate because a browser opening the page and curl sending a GET look the same to the server. Refresh the page to see new requests. Expired bins are deleted whenever a new bin is created.
 
 ## Stack
 
