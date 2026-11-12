@@ -1,67 +1,60 @@
-import { neon } from '@neondatabase/serverless';
+import { sql } from '../../../../lib/db';
+import { readBody, MAX_BODY_BYTES } from '../../../../lib/body';
 
-const sql = neon(process.env.DATABASE_URL_POOLED!);
-
-const MAX_BODY_BYTES = 256 * 1024;
-
-// returns the body as text, or null if it goes over the limit
-async function readBody(request: Request): Promise<string | null> {
-  const declared = Number(request.headers.get('content-length'));
-  if (declared > MAX_BODY_BYTES) return null;
-
-  if (!request.body) return '';
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_BODY_BYTES) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-
-  return new TextDecoder().decode(Buffer.concat(chunks));
-}
+const MAX_REQUESTS_PER_BIN = 200;
 
 async function handle(
   request: Request,
   { params }: { params: Promise<{ id: string; path?: string[] }> }
 ) {
-  const { id, path } = await params;
-  const pathname = '/' + (path ?? []).join('/');
-  const body = await readBody(request);
-  if (body === null) {
-    return new Response('body too large (max 256 KB)', { status: 413 });
+  try {
+    const { id, path } = await params;
+
+    // 1. bin exists, not expired, and how full is it
+    const bins = await sql`
+      SELECT (SELECT count(*) FROM requests WHERE bin_id = ${id})::int AS count
+      FROM bins
+      WHERE id = ${id} AND expires_at > now()
+    `;
+    if (bins.length === 0) {
+      return new Response('bin not found', { status: 404 });
+    }
+    if (bins[0].count >= MAX_REQUESTS_PER_BIN) {
+      return new Response(`bin is full (max ${MAX_REQUESTS_PER_BIN} requests)`, {
+        status: 429,
+      });
+    }
+
+    // 2. body, capped
+    const body = await readBody(request);
+    if (body === null) {
+      return new Response(`body too large (max ${MAX_BODY_BYTES / 1024} KB)`, {
+        status: 413,
+      });
+    }
+
+    // 3. save it
+    const pathname = '/' + (path ?? []).join('/');
+    const query = new URL(request.url).search;
+    const headers = JSON.stringify(Object.fromEntries(request.headers));
+
+    await sql`
+      INSERT INTO requests (bin_id, method, path, headers, query, body)
+      VALUES (
+        ${id}::text,
+        ${request.method}::text,
+        ${pathname}::text,
+        ${headers}::jsonb,
+        ${query}::text,
+        ${body}::text
+      )
+    `;
+
+    return new Response('ok');
+  } catch (err) {
+    console.error('failed to save request', err);
+    return new Response('failed to save request', { status: 500 });
   }
-  const query = new URL(request.url).search;
-
-  const saved = await sql`
-  INSERT INTO requests (bin_id, method, path, headers, query, body)
-  SELECT
-    ${id}::text,
-    ${request.method}::text,
-    ${pathname}::text,
-    ${JSON.stringify(Object.fromEntries(request.headers))}::jsonb,
-    ${query}::text,
-    ${body}::text
-  WHERE EXISTS (
-    SELECT 1 FROM bins
-    WHERE id = ${id} AND expires_at > now()
-  )
-  RETURNING id
-`;
-
-  if (saved.length === 0) {
-    return new Response('bin not found', { status: 404 });
-  }
-
-  return new Response('ok');
 }
 
 export const GET = handle;
