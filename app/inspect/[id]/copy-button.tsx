@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function CopyButton({
   text,
@@ -11,15 +11,41 @@ export default function CopyButton({
   label: string;
   primary?: boolean;
 }) {
-  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState<'copied' | 'failed' | null>(null);
+  const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    };
+  }, []);
+
+  function showStatus(nextStatus: 'copied' | 'failed') {
+    setStatus(nextStatus);
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    feedbackTimeout.current = setTimeout(() => setStatus(null), 1600);
+  }
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
-      setDone(true);
-      setTimeout(() => setDone(false), 1200);
+      showStatus('copied');
     } catch {
-      // clipboard blocked, nothing to do
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        showStatus(document.execCommand('copy') ? 'copied' : 'failed');
+      } catch {
+        showStatus('failed');
+      } finally {
+        textarea.remove();
+      }
     }
   }
 
@@ -31,8 +57,9 @@ export default function CopyButton({
           ? 'cursor-pointer rounded-md bg-accent px-4 py-3 text-xs font-bold text-bg'
           : 'cursor-pointer rounded-md border border-line px-4 py-3 text-xs text-white'
       }
+      aria-live='polite'
     >
-      {done ? 'copied' : label}
+      {status === 'copied' ? 'copied' : status === 'failed' ? 'copy failed' : label}
     </button>
   );
 }
