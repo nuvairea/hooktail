@@ -33,7 +33,7 @@ curl -X POST https://hooktail.vercel.app/b/<your-id> -d 'hello'
 
 ## How it works
 
-Each visit creates a bin with a random id and an expiry time. Every bin has two URLs:
+Each visit creates a bin with a random id that expires after 24 hours. Every bin has two URLs:
 
 | URL             | Purpose                 |
 | --------------- | ----------------------- |
