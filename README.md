@@ -23,6 +23,10 @@
   <a href="https://hooktail.vercel.app"><b>Open hooktail</b></a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="hooktail two-pane view" width="100%">
+</p>
+
 ## Try it
 
 Open the site and you get a bin with its own URL. Send anything to it:
@@ -41,6 +45,18 @@ Each visit creates a bin with a random id that expires after 24 hours. Every bin
 | `/b/<id>`       | where you send requests |
 
 They are separate because a browser opening the page and curl sending a GET look the same to the server. The page auto refresh to show new requests. Expired bins are deleted whenever a new bin is created.
+
+## Limits
+
+There are no accounts, so anyone can write to a bin. To keep it usable:
+
+| Limit            | Value    |
+| ---------------- | -------- |
+| Body size        | 256 KB   |
+| Requests per bin | 200      |
+| Bin lifetime     | 24 hours |
+
+Bin ids are random and never listed anywhere, and bin pages are marked `noindex`. Anyone with a bin's URL can read it, so don't send secrets you can't afford to leak.
 
 ## Stack
 
