@@ -6,7 +6,7 @@ import { type Row, timeAgo, timeUntil, size, formatBody } from './format';
 import { Json, MethodPill, KeyValueList } from './parts';
 import { notFound } from 'next/navigation';
 import Refresher from './refresher';
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   robots: {
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
       follow: false,
     },
   },
-}
+};
 
 export const dynamic = 'force-dynamic';
 
-export default async function InspectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ r?: string; tab?: string }> }) {
+export default async function InspectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ r?: string; tab?: string; m?: string }> }) {
   const { id } = await params;
-  const { r, tab = 'body' } = await searchParams;
+  const { r, tab = 'body', m = 'all' } = await searchParams;
 
   const sql = neon(process.env.DATABASE_URL_POOLED!);
 
@@ -41,15 +41,23 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
     ORDER BY created_at DESC
   `) as Row[];
 
+  // method filter: counts come from all rows, the list shows only the active method
+  const counts = new Map<string, number>();
+  for (const x of rows) counts.set(x.method, (counts.get(x.method) ?? 0) + 1);
+  const methods = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const active = methods.some(([name]) => name.toLowerCase() === m.toLowerCase()) ? m.toLowerCase() : 'all';
+  const visible = active === 'all' ? rows : rows.filter((x) => x.method.toLowerCase() === active);
+  const mq = active === 'all' ? '' : `&m=${active}`;
+
   const h = await headers();
   const proto = h.get('x-forwarded-proto') ?? 'http';
   const binUrl = `${proto}://${h.get('host')}/b/${id}`;
 
-  const selected = rows.find((x) => String(x.id) === r) ?? rows[0];
+  const selected = visible.find((x) => String(x.id) === r) ?? visible[0];
 
   // on phones: show the list OR the detail. on desktop: both.
-  const mobileDetail = Boolean(r) && rows.length > 0;
-  const hideOnMobile = rows.length > 0 && !mobileDetail;
+  const mobileDetail = Boolean(r) && visible.length > 0;
+  const hideOnMobile = visible.length > 0 && !mobileDetail;
 
   let curl = '';
   let copyText = '';
@@ -82,7 +90,9 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
         <p className='text-white'>
           <span className='mr-2 text-accent'>●</span>hooktail
         </p>
-        <p className='mt-1 text-xs'>{rows.length === 0 ? 'waiting' : `${rows.length} requests`} · expires in {timeUntil(expiresAt)}</p>
+        <p className='mt-1 text-xs'>
+          {rows.length === 0 ? 'waiting' : `${rows.length} requests`} · expires in {timeUntil(expiresAt)}
+        </p>
 
         <div className='mt-5 rounded-lg border border-line bg-panel p-4'>
           <p className='text-[11px]'>send requests to</p>
@@ -93,11 +103,28 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
           <p className='mt-3 break-all rounded-md border border-line bg-bg p-3 text-[11px]'>$ curl -X POST {binUrl} -d &apos;hello&apos;</p>
         </div>
 
-        <div className='mt-5 space-y-2'>
-          {rows.map((x) => (
+        {rows.length > 0 && (
+          <div className='mt-5 flex gap-4 overflow-x-auto whitespace-nowrap border-b border-line pb-3 text-[11px]'>
+            <Link href={`/inspect/${id}`} className={active === 'all' ? 'text-accent' : ''}>
+              {active === 'all' && '· '}all {rows.length}
+            </Link>
+            {methods.map(([method, n]) => {
+              const key = method.toLowerCase();
+              return (
+                <Link key={method} href={`?m=${key}`} className={active === key ? 'text-accent' : ''}>
+                  {active === key && '· '}
+                  {key} {n}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        <div className='mt-4 space-y-2'>
+          {visible.map((x) => (
             <Link
               key={x.id}
-              href={`?r=${x.id}`}
+              href={`?r=${x.id}${mq}`}
               className={`flex items-center justify-between rounded-lg border bg-panel p-3 ${selected && x.id === selected.id ? 'md:border-accent border-line' : 'border-line'}`}
             >
               <span className='flex items-center gap-3'>
@@ -116,7 +143,7 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
           <div className='mt-5 flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-line px-6 text-center md:hidden'>
             <span className='mb-4 text-2xl text-accent'>●</span>
             <p className='text-white'>waiting for requests</p>
-            <p className='mt-2 text-xs'>send any http request to your url. it shows up here.</p>
+            <p className='mt-2 text-xs'>send any http request to your url. it shows up here within a couple of seconds.</p>
           </div>
         )}
       </aside>
@@ -127,13 +154,13 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
           <div className='flex min-h-80 flex-col items-center justify-center rounded-lg border border-dashed border-line text-center'>
             <span className='mb-4 text-2xl text-accent'>●</span>
             <p className='text-white'>waiting for requests</p>
-            <p className='mt-2 max-w-xs text-xs'>send any http request to your url. it shows up here.</p>
+            <p className='mt-2 max-w-xs text-xs'>send any http request to your url. it shows up here within a couple of seconds.</p>
           </div>
         )}
 
         {selected && (
           <>
-            <Link href={`/inspect/${id}`} className='mb-6 block text-xs md:hidden'>
+            <Link href={active === 'all' ? `/inspect/${id}` : `/inspect/${id}?m=${active}`} className='mb-6 block text-xs md:hidden'>
               ← requests
             </Link>
 
@@ -147,7 +174,7 @@ export default async function InspectPage({ params, searchParams }: { params: Pr
 
             <div className='mt-6 flex border-b border-line text-xs'>
               {['body', 'headers', 'query'].map((t) => (
-                <Link key={t} href={`?r=${selected.id}&tab=${t}`} className={`-mb-px flex-1 border-b-2 py-3 text-center ${tab === t ? 'border-accent text-accent' : 'border-transparent'}`}>
+                <Link key={t} href={`?r=${selected.id}&tab=${t}${mq}`} className={`-mb-px flex-1 border-b-2 py-3 text-center ${tab === t ? 'border-accent text-accent' : 'border-transparent'}`}>
                   {t}
                 </Link>
               ))}
