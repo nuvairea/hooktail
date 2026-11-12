@@ -19,9 +19,11 @@ export function timeAgo(date: string | Date) {
 export function timeUntil(date: string | Date) {
   const s = Math.max(0, Math.ceil((new Date(date).getTime() - Date.now()) / 1000));
   if (s < 60) return '<1m';
-  if (s < 3600) return `${Math.ceil(s / 60)}m`;
-  if (s < 86400) return `${Math.ceil(s / 3600)}h`;
-  return `${Math.ceil(s / 86400)}d`;
+  const minutes = Math.ceil(s / 60);
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) return `${remainingMinutes}m`;
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
 }
 
 export function size(body: string | null) {
