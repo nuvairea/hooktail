@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const EVERY_MS = 1000;
+const EVERY_MS = 3000;
 
 export default function Refresher() {
   const router = useRouter();
