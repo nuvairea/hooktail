@@ -44,17 +44,18 @@ Each visit creates a bin with a random id that expires after 24 hours. Every bin
 | `/inspect/<id>` | the page you look at    |
 | `/b/<id>`       | where you send requests |
 
-They are separate because a browser opening the page and curl sending a GET look the same to the server. The page auto refresh to show new requests. Expired bins are deleted whenever a new bin is created.
+They are separate because a browser opening the page and curl sending a GET look the same to the server. The page refreshes automatically to show new requests. Expired bins are deleted whenever a new bin is created.
 
 ## Limits
 
 There are no accounts, so anyone can write to a bin. To keep it usable:
 
-| Limit            | Value    |
-| ---------------- | -------- |
-| Body size        | 256 KB   |
-| Requests per bin | 200      |
-| Bin lifetime     | 24 hours |
+| Limit            | Value       |
+| ---------------- | ----------- |
+| Body size        | 256 KB      |
+| Requests per bin | 200         |
+| New bins per IP  | 20 per hour |
+| Bin lifetime     | 24 hours    |
 
 Bin ids are random and never listed anywhere, and bin pages are marked `noindex`. Anyone with a bin's URL can read it, so don't send secrets you can't afford to leak.
 
@@ -77,7 +78,10 @@ Create a Neon database, run the schema in [`db/schema.sql`](db/schema.sql), then
 
 ```
 DATABASE_URL_POOLED=postgres://...
+IP_HASH_SALT=any-random-string
 ```
+
+`IP_HASH_SALT` is mixed into the hash of each visitor's IP, which is used to limit new bins per IP. The raw IP is never stored.
 
 ```bash
 npm run dev
